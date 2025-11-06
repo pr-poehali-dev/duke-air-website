@@ -86,9 +86,40 @@ const Index = () => {
       return;
     }
     
-    setSearchResults(allFlights);
+    const generateFlights = (): Flight[] => {
+      const flights: Flight[] = [];
+      const aircrafts = ['Boeing 777', 'Boeing 737', 'Airbus A320', 'Airbus A350', 'Boeing 787'];
+      const basePrice = 15000 + Math.floor(Math.random() * 20000);
+      
+      for (let i = 0; i < 5; i++) {
+        const departHour = 6 + Math.floor(Math.random() * 16);
+        const departMinute = Math.floor(Math.random() * 4) * 15;
+        const flightDuration = 180 + Math.floor(Math.random() * 360);
+        const arrivalTime = departHour * 60 + departMinute + flightDuration;
+        const arrivalHour = Math.floor(arrivalTime / 60) % 24;
+        const arrivalMinute = arrivalTime % 60;
+        const durationHours = Math.floor(flightDuration / 60);
+        const durationMinutes = flightDuration % 60;
+        
+        flights.push({
+          id: String(i + 1),
+          from: `${from}`,
+          to: `${to}`,
+          departure: `${String(departHour).padStart(2, '0')}:${String(departMinute).padStart(2, '0')}`,
+          arrival: `${String(arrivalHour).padStart(2, '0')}:${String(arrivalMinute).padStart(2, '0')}`,
+          price: basePrice + (i * 1000) - Math.floor(Math.random() * 3000),
+          aircraft: aircrafts[Math.floor(Math.random() * aircrafts.length)],
+          duration: `${durationHours}ч ${durationMinutes}м`
+        });
+      }
+      
+      return flights.sort((a, b) => a.price - b.price);
+    };
+    
+    const results = generateFlights();
+    setSearchResults(results);
     setActiveTab('search');
-    toast.success('Найдено рейсов: ' + allFlights.length);
+    toast.success('Найдено рейсов: ' + results.length);
   };
 
   const handleBookFlight = (flight: Flight) => {
