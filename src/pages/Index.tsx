@@ -50,6 +50,13 @@ const Index = () => {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [bookingCode, setBookingCode] = useState('');
   const [selectedSeat, setSelectedSeat] = useState<string | null>(null);
+  const [isLoginOpen, setIsLoginOpen] = useState(false);
+  const [phoneNumber, setPhoneNumber] = useState('');
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [userName, setUserName] = useState('');
+  const [isPaymentOpen, setIsPaymentOpen] = useState(false);
+  const [isConfirmPaymentOpen, setIsConfirmPaymentOpen] = useState(false);
+  const [selectedBookingForInfo, setSelectedBookingForInfo] = useState<Booking | null>(null);
 
   const popularDestinations = [
     { city: 'Дубай', country: 'ОАЭ', price: 'от 25 000 ₽', image: 'https://cdn.poehali.dev/projects/e1447cea-fea6-40d1-be4c-7de588bd55c1/files/45e4e2df-14ba-492e-9523-a72140c7e751.jpg' },
@@ -57,27 +64,17 @@ const Index = () => {
     { city: 'Токио', country: 'Япония', price: 'от 35 000 ₽', image: 'https://images.unsplash.com/photo-1540959733332-eab4deabeeaf?w=800&auto=format&fit=crop' },
   ];
 
-  const mockFlights: Flight[] = [
-    {
-      id: '1',
-      from: 'Москва (DME)',
-      to: 'Дубай (DXB)',
-      departure: '10:30',
-      arrival: '17:45',
-      price: 25000,
-      aircraft: 'Boeing 777',
-      duration: '5ч 15м'
-    },
-    {
-      id: '2',
-      from: 'Москва (DME)',
-      to: 'Дубай (DXB)',
-      departure: '14:20',
-      arrival: '21:35',
-      price: 22500,
-      aircraft: 'Airbus A320',
-      duration: '5ч 15м'
-    }
+  const allFlights: Flight[] = [
+    { id: '1', from: 'Москва (DME)', to: 'Дубай (DXB)', departure: '10:30', arrival: '17:45', price: 25000, aircraft: 'Boeing 777', duration: '5ч 15м' },
+    { id: '2', from: 'Москва (DME)', to: 'Дубай (DXB)', departure: '14:20', arrival: '21:35', price: 22500, aircraft: 'Airbus A320', duration: '5ч 15м' },
+    { id: '3', from: 'Москва (DME)', to: 'Париж (CDG)', departure: '08:00', arrival: '11:30', price: 18000, aircraft: 'Boeing 737', duration: '4ч 30м' },
+    { id: '4', from: 'Москва (DME)', to: 'Париж (CDG)', departure: '16:15', arrival: '19:45', price: 19500, aircraft: 'Airbus A320', duration: '4ч 30м' },
+    { id: '5', from: 'Москва (DME)', to: 'Токио (NRT)', departure: '12:00', arrival: '04:30', price: 35000, aircraft: 'Boeing 777', duration: '9ч 30м' },
+    { id: '6', from: 'Москва (DME)', to: 'Токио (NRT)', departure: '20:45', arrival: '13:15', price: 33000, aircraft: 'Boeing 787', duration: '9ч 30м' },
+    { id: '7', from: 'Санкт-Петербург (LED)', to: 'Дубай (DXB)', departure: '09:00', arrival: '16:15', price: 27000, aircraft: 'Airbus A320', duration: '5ч 15м' },
+    { id: '8', from: 'Санкт-Петербург (LED)', to: 'Париж (CDG)', departure: '11:30', arrival: '14:45', price: 20000, aircraft: 'Boeing 737', duration: '4ч 15м' },
+    { id: '9', from: 'Дубай (DXB)', to: 'Москва (DME)', departure: '18:30', arrival: '23:00', price: 24000, aircraft: 'Boeing 777', duration: '5ч 30м' },
+    { id: '10', from: 'Париж (CDG)', to: 'Москва (DME)', departure: '13:00', arrival: '18:15', price: 17500, aircraft: 'Airbus A320', duration: '4ч 15м' }
   ];
 
   const handleSearch = () => {
@@ -85,9 +82,21 @@ const Index = () => {
       toast.error('Заполните все обязательные поля');
       return;
     }
-    setSearchResults(mockFlights);
+    
+    const results = allFlights.filter(flight => {
+      const fromMatch = flight.from.toLowerCase().includes(from.toLowerCase());
+      const toMatch = flight.to.toLowerCase().includes(to.toLowerCase());
+      return fromMatch && toMatch;
+    });
+    
+    if (results.length === 0) {
+      toast.error('Рейсы не найдены. Попробуйте другие города.');
+      return;
+    }
+    
+    setSearchResults(results);
     setActiveTab('search');
-    toast.success('Найдено рейсов: ' + mockFlights.length);
+    toast.success('Найдено рейсов: ' + results.length);
   };
 
   const handleBookFlight = (flight: Flight) => {
@@ -106,14 +115,53 @@ const Index = () => {
       passengers,
       class: travelClass,
       seat: selectedSeat,
-      status: 'confirmed'
+      status: 'pending'
     };
 
     setBookings([...bookings, newBooking]);
-    toast.success(`Бронирование подтверждено! Код: ${newBooking.id}`);
+    toast.success(`Бронирование создано! Код: ${newBooking.id}`);
     setSelectedFlight(null);
     setSelectedSeat(null);
+    setIsPaymentOpen(true);
+  };
+
+  const handleLogin = () => {
+    if (!phoneNumber || phoneNumber.length < 10) {
+      toast.error('Введите корректный номер телефона');
+      return;
+    }
+    setIsLoggedIn(true);
+    setUserName(phoneNumber);
+    setIsLoginOpen(false);
+    toast.success('Вы вошли в аккаунт!');
+  };
+
+  const handlePayment = () => {
+    setIsPaymentOpen(false);
+    setIsConfirmPaymentOpen(true);
+  };
+
+  const confirmPayment = () => {
+    const lastBooking = bookings[bookings.length - 1];
+    if (lastBooking) {
+      const updatedBookings = [...bookings];
+      updatedBookings[updatedBookings.length - 1] = {
+        ...lastBooking,
+        status: 'paid'
+      };
+      setBookings(updatedBookings);
+    }
+    setIsConfirmPaymentOpen(false);
+    toast.success('Оплата прошла успешно! Билет куплен.');
     setActiveTab('mybooking');
+  };
+
+  const handleRefund = (bookingId: string) => {
+    const updatedBookings = bookings.map(b => 
+      b.id === bookingId ? { ...b, status: 'refunded' } : b
+    );
+    setBookings(updatedBookings);
+    toast.success('Билет возвращён. Деньги будут возвращены в течение 5-7 дней.');
   };
 
   const renderSeatMap = () => {
@@ -202,10 +250,42 @@ const Index = () => {
               <Button variant="ghost" size="sm" className="text-primary-foreground hover:bg-primary/90">
                 RU
               </Button>
-              <Button variant="secondary" size="sm">
-                <Icon name="User" size={16} className="mr-1" />
-                Вход
-              </Button>
+              {isLoggedIn ? (
+                <div className="flex items-center gap-2">
+                  <Icon name="User" size={16} className="text-accent" />
+                  <span className="text-sm">{userName}</span>
+                </div>
+              ) : (
+                <Dialog open={isLoginOpen} onOpenChange={setIsLoginOpen}>
+                  <DialogTrigger asChild>
+                    <Button variant="secondary" size="sm">
+                      <Icon name="User" size={16} className="mr-1" />
+                      Вход
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Вход в аккаунт</DialogTitle>
+                      <DialogDescription>Введите номер телефона для входа</DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4 py-4">
+                      <div>
+                        <Label>Номер телефона</Label>
+                        <Input
+                          type="tel"
+                          placeholder="+7 (900) 123-45-67"
+                          value={phoneNumber}
+                          onChange={(e) => setPhoneNumber(e.target.value)}
+                          className="mt-2"
+                        />
+                      </div>
+                      <Button onClick={handleLogin} className="w-full bg-accent hover:bg-accent/90">
+                        Войти
+                      </Button>
+                    </div>
+                  </DialogContent>
+                </Dialog>
+              )}
             </div>
           </div>
         </div>
@@ -544,7 +624,9 @@ const Index = () => {
                   <CardContent className="p-6">
                     <div className="flex justify-between items-start mb-4">
                       <div>
-                        <Badge className="mb-2">{booking.status === 'confirmed' ? 'Подтверждено' : booking.status}</Badge>
+                        <Badge className={`mb-2 ${booking.status === 'paid' ? 'bg-green-500' : booking.status === 'refunded' ? 'bg-red-500' : 'bg-yellow-500'}`}>
+                          {booking.status === 'paid' ? 'Оплачено' : booking.status === 'refunded' ? 'Возвращено' : 'Ожидает оплаты'}
+                        </Badge>
                         <h4 className="text-xl font-bold">Код: {booking.id}</h4>
                       </div>
                       <div className="text-right">
@@ -573,19 +655,181 @@ const Index = () => {
                       </div>
                     </div>
 
-                    <div className="flex gap-2">
-                      <Button variant="outline" size="sm">
-                        <Icon name="Download" size={16} className="mr-2" />
-                        Скачать билет
-                      </Button>
-                      <Button variant="outline" size="sm">
-                        <Icon name="CheckCircle" size={16} className="mr-2" />
-                        Онлайн-регистрация
-                      </Button>
-                      <Button variant="outline" size="sm">
-                        <Icon name="Luggage" size={16} className="mr-2" />
-                        Добавить багаж
-                      </Button>
+                    <div className="flex flex-wrap gap-2">
+                      {booking.status === 'pending' && (
+                        <Dialog open={isPaymentOpen} onOpenChange={setIsPaymentOpen}>
+                          <DialogTrigger asChild>
+                            <Button variant="default" size="sm" className="bg-accent hover:bg-accent/90">
+                              <Icon name="CreditCard" size={16} className="mr-2" />
+                              Оплатить
+                            </Button>
+                          </DialogTrigger>
+                          <DialogContent>
+                            <DialogHeader>
+                              <DialogTitle>Оплата билета</DialogTitle>
+                              <DialogDescription>Бронирование {booking.id}</DialogDescription>
+                            </DialogHeader>
+                            <div className="space-y-4 py-4">
+                              <div className="text-center">
+                                <p className="text-3xl font-bold text-primary mb-2">
+                                  {booking.flight.price.toLocaleString('ru-RU')} ₽
+                                </p>
+                                <p className="text-sm text-muted-foreground">
+                                  {booking.flight.from} → {booking.flight.to}
+                                </p>
+                              </div>
+                              <Button onClick={handlePayment} className="w-full bg-accent hover:bg-accent/90">
+                                Перейти к оплате
+                              </Button>
+                            </div>
+                          </DialogContent>
+                        </Dialog>
+                      )}
+                      
+                      <Dialog open={isConfirmPaymentOpen} onOpenChange={setIsConfirmPaymentOpen}>
+                        <DialogContent>
+                          <DialogHeader>
+                            <DialogTitle>Подтверждение покупки</DialogTitle>
+                            <DialogDescription>Точно хотите купить этот билет?</DialogDescription>
+                          </DialogHeader>
+                          <div className="space-y-4 py-4">
+                            <div className="text-center">
+                              <p className="text-2xl font-bold text-primary mb-2">
+                                {bookings[bookings.length - 1]?.flight.price.toLocaleString('ru-RU')} ₽
+                              </p>
+                              <p className="text-sm text-muted-foreground">
+                                {bookings[bookings.length - 1]?.flight.from} → {bookings[bookings.length - 1]?.flight.to}
+                              </p>
+                            </div>
+                            <div className="flex gap-2">
+                              <Button variant="outline" onClick={() => setIsConfirmPaymentOpen(false)} className="flex-1">
+                                Отмена
+                              </Button>
+                              <Button onClick={confirmPayment} className="flex-1 bg-accent hover:bg-accent/90">
+                                Подтвердить
+                              </Button>
+                            </div>
+                          </div>
+                        </DialogContent>
+                      </Dialog>
+
+                      {booking.status === 'paid' && (
+                        <>
+                          <Button variant="outline" size="sm">
+                            <Icon name="Download" size={16} className="mr-2" />
+                            Скачать билет
+                          </Button>
+                          <Button variant="outline" size="sm">
+                            <Icon name="CheckCircle" size={16} className="mr-2" />
+                            Онлайн-регистрация
+                          </Button>
+                          <Button variant="outline" size="sm">
+                            <Icon name="Luggage" size={16} className="mr-2" />
+                            Добавить багаж
+                          </Button>
+                          <Button 
+                            variant="destructive" 
+                            size="sm"
+                            onClick={() => handleRefund(booking.id)}
+                          >
+                            <Icon name="RotateCcw" size={16} className="mr-2" />
+                            Вернуть билет
+                          </Button>
+                        </>
+                      )}
+
+                      <Dialog>
+                        <DialogTrigger asChild>
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => setSelectedBookingForInfo(booking)}
+                          >
+                            <Icon name="Info" size={16} className="mr-2" />
+                            Информация о билете
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent className="max-w-2xl">
+                          <DialogHeader>
+                            <DialogTitle>Полная информация о билете</DialogTitle>
+                            <DialogDescription>Код бронирования: {booking.id}</DialogDescription>
+                          </DialogHeader>
+                          <div className="space-y-4">
+                            <Card>
+                              <CardHeader>
+                                <CardTitle className="text-lg">Информация о рейсе</CardTitle>
+                              </CardHeader>
+                              <CardContent className="space-y-3">
+                                <div className="grid grid-cols-2 gap-4">
+                                  <div>
+                                    <p className="text-sm text-muted-foreground">Маршрут</p>
+                                    <p className="font-semibold">{booking.flight.from} → {booking.flight.to}</p>
+                                  </div>
+                                  <div>
+                                    <p className="text-sm text-muted-foreground">Номер рейса</p>
+                                    <p className="font-semibold">DA-{booking.flight.id.padStart(4, '0')}</p>
+                                  </div>
+                                  <div>
+                                    <p className="text-sm text-muted-foreground">Вылет</p>
+                                    <p className="font-semibold">{booking.flight.departure}</p>
+                                  </div>
+                                  <div>
+                                    <p className="text-sm text-muted-foreground">Прилёт</p>
+                                    <p className="font-semibold">{booking.flight.arrival}</p>
+                                  </div>
+                                  <div>
+                                    <p className="text-sm text-muted-foreground">Длительность</p>
+                                    <p className="font-semibold">{booking.flight.duration}</p>
+                                  </div>
+                                  <div>
+                                    <p className="text-sm text-muted-foreground">Самолёт</p>
+                                    <p className="font-semibold">{booking.flight.aircraft}</p>
+                                  </div>
+                                  <div>
+                                    <p className="text-sm text-muted-foreground">Класс обслуживания</p>
+                                    <p className="font-semibold">
+                                      {booking.class === 'economy' ? 'Эконом' : booking.class === 'business' ? 'Бизнес' : 'Первый класс'}
+                                    </p>
+                                  </div>
+                                  <div>
+                                    <p className="text-sm text-muted-foreground">Место</p>
+                                    <p className="font-semibold">{booking.seat}</p>
+                                  </div>
+                                  <div>
+                                    <p className="text-sm text-muted-foreground">Количество пассажиров</p>
+                                    <p className="font-semibold">{booking.passengers}</p>
+                                  </div>
+                                  <div>
+                                    <p className="text-sm text-muted-foreground">Стоимость</p>
+                                    <p className="font-semibold text-primary text-lg">
+                                      {booking.flight.price.toLocaleString('ru-RU')} ₽
+                                    </p>
+                                  </div>
+                                  <div>
+                                    <p className="text-sm text-muted-foreground">Статус</p>
+                                    <Badge className={booking.status === 'paid' ? 'bg-green-500' : booking.status === 'refunded' ? 'bg-red-500' : 'bg-yellow-500'}>
+                                      {booking.status === 'paid' ? 'Оплачено' : booking.status === 'refunded' ? 'Возвращено' : 'Ожидает оплаты'}
+                                    </Badge>
+                                  </div>
+                                  <div>
+                                    <p className="text-sm text-muted-foreground">Багаж</p>
+                                    <p className="font-semibold">1 место, 23 кг</p>
+                                  </div>
+                                </div>
+                                <div className="border-t pt-3 mt-3">
+                                  <p className="text-sm text-muted-foreground mb-2">Условия тарифа</p>
+                                  <ul className="text-sm space-y-1">
+                                    <li>✓ Бесплатная регистрация онлайн</li>
+                                    <li>✓ Выбор места в салоне</li>
+                                    <li>✓ Питание на борту включено</li>
+                                    <li>✓ Возврат билета до вылета (комиссия 15%)</li>
+                                  </ul>
+                                </div>
+                              </CardContent>
+                            </Card>
+                          </div>
+                        </DialogContent>
+                      </Dialog>
                     </div>
                   </CardContent>
                 </Card>
