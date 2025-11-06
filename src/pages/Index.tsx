@@ -57,6 +57,9 @@ const Index = () => {
   const [isPaymentOpen, setIsPaymentOpen] = useState(false);
   const [isConfirmPaymentOpen, setIsConfirmPaymentOpen] = useState(false);
   const [selectedBookingForInfo, setSelectedBookingForInfo] = useState<Booking | null>(null);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [showBookingInfo, setShowBookingInfo] = useState(false);
+  const [currentBooking, setCurrentBooking] = useState<Booking | null>(null);
 
   const popularDestinations = [
     { city: 'Дубай', country: 'ОАЭ', price: 'от 25 000 ₽', image: 'https://cdn.poehali.dev/projects/e1447cea-fea6-40d1-be4c-7de588bd55c1/files/45e4e2df-14ba-492e-9523-a72140c7e751.jpg' },
@@ -83,20 +86,9 @@ const Index = () => {
       return;
     }
     
-    const results = allFlights.filter(flight => {
-      const fromMatch = flight.from.toLowerCase().includes(from.toLowerCase());
-      const toMatch = flight.to.toLowerCase().includes(to.toLowerCase());
-      return fromMatch && toMatch;
-    });
-    
-    if (results.length === 0) {
-      toast.error('Рейсы не найдены. Попробуйте другие города.');
-      return;
-    }
-    
-    setSearchResults(results);
+    setSearchResults(allFlights);
     setActiveTab('search');
-    toast.success('Найдено рейсов: ' + results.length);
+    toast.success('Найдено рейсов: ' + allFlights.length);
   };
 
   const handleBookFlight = (flight: Flight) => {
@@ -119,10 +111,10 @@ const Index = () => {
     };
 
     setBookings([...bookings, newBooking]);
-    toast.success(`Бронирование создано! Код: ${newBooking.id}`);
+    setCurrentBooking(newBooking);
     setSelectedFlight(null);
     setSelectedSeat(null);
-    setIsPaymentOpen(true);
+    setShowBookingInfo(true);
   };
 
   const handleLogin = () => {
@@ -219,6 +211,13 @@ const Index = () => {
               <h1 className="text-2xl md:text-3xl font-bold">Duke Air</h1>
             </div>
             
+            <button 
+              className="md:hidden text-primary-foreground"
+              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            >
+              <Icon name="Menu" size={28} />
+            </button>
+
             <nav className="hidden md:flex items-center gap-6">
               <button
                 onClick={() => setActiveTab('home')}
@@ -289,7 +288,189 @@ const Index = () => {
             </div>
           </div>
         </div>
+
+        {isMobileMenuOpen && (
+          <div className="md:hidden bg-primary/95 border-t border-primary-foreground/20">
+            <nav className="container mx-auto px-4 py-4 flex flex-col gap-3">
+              <button
+                onClick={() => { setActiveTab('home'); setIsMobileMenuOpen(false); }}
+                className={`text-left py-2 hover:text-accent transition-colors ${activeTab === 'home' ? 'text-accent' : ''}`}
+              >
+                Главная
+              </button>
+              <button
+                onClick={() => { setActiveTab('mybooking'); setIsMobileMenuOpen(false); }}
+                className={`text-left py-2 hover:text-accent transition-colors ${activeTab === 'mybooking' ? 'text-accent' : ''}`}
+              >
+                Моё бронирование
+              </button>
+              <button
+                onClick={() => { setActiveTab('reviews'); setIsMobileMenuOpen(false); }}
+                className={`text-left py-2 hover:text-accent transition-colors ${activeTab === 'reviews' ? 'text-accent' : ''}`}
+              >
+                Отзывы
+              </button>
+              <button
+                onClick={() => { setActiveTab('about'); setIsMobileMenuOpen(false); }}
+                className={`text-left py-2 hover:text-accent transition-colors ${activeTab === 'about' ? 'text-accent' : ''}`}
+              >
+                О компании
+              </button>
+              {isLoggedIn && (
+                <button
+                  onClick={() => { setIsLoggedIn(false); setUserName(''); setPhoneNumber(''); setIsMobileMenuOpen(false); toast.success('Вы вышли из аккаунта'); }}
+                  className="text-left py-2 text-red-300 hover:text-red-200 transition-colors"
+                >
+                  Выйти из аккаунта
+                </button>
+              )}
+            </nav>
+          </div>
+        )}
       </header>
+
+      <Dialog open={showBookingInfo} onOpenChange={setShowBookingInfo}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-2xl">Информация о бронировании</DialogTitle>
+            <DialogDescription>Код: {currentBooking?.id}</DialogDescription>
+          </DialogHeader>
+          {currentBooking && (
+            <div className="space-y-6">
+              <Card>
+                <CardHeader className="bg-primary/5">
+                  <CardTitle className="flex items-center gap-2">
+                    <Icon name="Plane" size={24} className="text-primary" />
+                    Детали рейса
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="pt-6 space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-sm text-muted-foreground mb-1">Номер рейса</p>
+                      <p className="text-lg font-bold">DA-{currentBooking.flight.id.padStart(4, '0')}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground mb-1">Самолёт</p>
+                      <p className="text-lg font-bold">{currentBooking.flight.aircraft}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground mb-1">Откуда</p>
+                      <p className="text-lg font-bold">{currentBooking.flight.from}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground mb-1">Куда</p>
+                      <p className="text-lg font-bold">{currentBooking.flight.to}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground mb-1">Дата вылета</p>
+                      <p className="text-lg font-bold">{departDate ? format(departDate, 'dd MMMM yyyy', { locale: ru }) : 'Не указана'}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground mb-1">Время вылета</p>
+                      <p className="text-lg font-bold">{currentBooking.flight.departure}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground mb-1">Время прилёта</p>
+                      <p className="text-lg font-bold">{currentBooking.flight.arrival}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground mb-1">Длительность</p>
+                      <p className="text-lg font-bold">{currentBooking.flight.duration}</p>
+                    </div>
+                  </div>
+
+                  <div className="border-t pt-4 mt-4">
+                    <p className="text-sm text-muted-foreground mb-3">Важная информация</p>
+                    <div className="space-y-2 text-sm">
+                      <div className="flex items-start gap-2">
+                        <Icon name="Clock" size={16} className="text-primary mt-0.5" />
+                        <div>
+                          <p className="font-semibold">Регистрация открывается за 3 часа до вылета</p>
+                          <p className="text-muted-foreground">Начало: {currentBooking.flight.departure.split(':')[0] - 3}:{currentBooking.flight.departure.split(':')[1]}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-start gap-2">
+                        <Icon name="DoorOpen" size={16} className="text-primary mt-0.5" />
+                        <div>
+                          <p className="font-semibold">Посадка начинается за 40 минут до вылета</p>
+                          <p className="text-muted-foreground">Начало посадки: {String(parseInt(currentBooking.flight.departure.split(':')[0]) * 60 + parseInt(currentBooking.flight.departure.split(':')[1]) - 40).split('').length > 2 ? Math.floor((parseInt(currentBooking.flight.departure.split(':')[0]) * 60 + parseInt(currentBooking.flight.departure.split(':')[1]) - 40) / 60) : '0' + Math.floor((parseInt(currentBooking.flight.departure.split(':')[0]) * 60 + parseInt(currentBooking.flight.departure.split(':')[1]) - 40) / 60)}:{String((parseInt(currentBooking.flight.departure.split(':')[0]) * 60 + parseInt(currentBooking.flight.departure.split(':')[1]) - 40) % 60).padStart(2, '0')}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-start gap-2">
+                        <Icon name="AlertCircle" size={16} className="text-accent mt-0.5" />
+                        <div>
+                          <p className="font-semibold">Посадка заканчивается за 15 минут до вылета</p>
+                          <p className="text-muted-foreground">Будьте у выхода вовремя!</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="bg-accent/5">
+                  <CardTitle className="flex items-center gap-2">
+                    <Icon name="Ticket" size={24} className="text-accent" />
+                    Данные билета
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="pt-6">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-sm text-muted-foreground mb-1">Место</p>
+                      <p className="text-2xl font-bold text-accent">{currentBooking.seat}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground mb-1">Класс</p>
+                      <p className="text-lg font-bold">
+                        {currentBooking.class === 'economy' ? 'Эконом' : currentBooking.class === 'business' ? 'Бизнес' : 'Первый класс'}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground mb-1">Пассажиров</p>
+                      <p className="text-lg font-bold">{currentBooking.passengers}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground mb-1">Багаж</p>
+                      <p className="text-lg font-bold">1 место, 23 кг</p>
+                    </div>
+                    <div className="col-span-2">
+                      <p className="text-sm text-muted-foreground mb-1">Стоимость</p>
+                      <p className="text-3xl font-bold text-primary">{currentBooking.flight.price.toLocaleString('ru-RU')} ₽</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <div className="flex gap-2">
+                <Button 
+                  onClick={() => {
+                    setShowBookingInfo(false);
+                    setIsPaymentOpen(true);
+                  }}
+                  className="flex-1 bg-accent hover:bg-accent/90"
+                >
+                  <Icon name="CreditCard" size={20} className="mr-2" />
+                  Перейти к оплате
+                </Button>
+                <Button 
+                  variant="outline"
+                  onClick={() => {
+                    setShowBookingInfo(false);
+                    setActiveTab('mybooking');
+                  }}
+                  className="flex-1"
+                >
+                  <Icon name="FileText" size={20} className="mr-2" />
+                  Мои бронирования
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
       {activeTab === 'home' && (
         <>
